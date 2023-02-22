@@ -95,21 +95,14 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      for (int i = 0; i < 1000; ++i) {
-          TIM4->CCR2 = i;
-          HAL_Delay(1);
-      }
-      for (int i = 1000; i > 0; --i) {
-          TIM4->CCR2 = i;
-          HAL_Delay(1);
-      }
+
 
     /* USER CODE END WHILE */
 
