@@ -63,18 +63,18 @@ static void MX_TIM1_Init(void);
 void sendTo595(uint8_t value){
     for (size_t i = 0; i < 9; i++){
         if (value & 0x01 << (8-i)){   // раскладываем побитно value
-            HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_SET); // если 1, то SER в высокий уровень
+            SER_595_GPIO_Port->ODR |= SER_595_Pin; // если 1, то SER в высокий уровень
         }
         else {
-            HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_RESET);  // если 0, то SER в низкий уровень
+            SER_595_GPIO_Port->ODR &= ~SER_595_Pin; // если 0, то SER в низкий уровень
         }
 
-        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_SET); //помещаем бит в сдвиговый регистр
-        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_RESET);
+        SRCLK_595_GPIO_Port->ODR |= SRCLK_595_Pin; //помещаем бит в сдвиговый регистр
+        SRCLK_595_GPIO_Port->ODR &= ~SRCLK_595_Pin;
     }
 
-    HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_SET); //помещаем данные из сдвигового регистра в регистр хранения
-    HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_RESET);
+        RCLK_595_GPIO_Port->ODR |= RCLK_595_Pin; //помещаем данные из сдвигового регистра в регистр хранения
+        RCLK_595_GPIO_Port->ODR &= ~RCLK_595_Pin;
 }
 
 void printDigit(uint8_t value){
@@ -135,14 +135,14 @@ int main(void)
     printDigit(10);
     while (1)
     {
-        if (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin)){
+        if (Button_GPIO_Port->IDR & Button_Pin){
             HAL_TIM_Base_Start(&htim1); //тикает, пока нажата кнопка
-            while (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin)){
+            while (Button_GPIO_Port->IDR & Button_Pin){
                 uint8_t value = 1;
                 for (int i = 0; i < 6; ++i) { //анимация бегающей черточки
                     sendTo595(value<<i);
                     HAL_Delay(50);
-                    if (!HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin)) break;
+                    if (!(Button_GPIO_Port->IDR & Button_Pin)) break;
                 }
             };
             printDigit((uint8_t)TIM1->CNT + 1);
