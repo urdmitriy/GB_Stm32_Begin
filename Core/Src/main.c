@@ -40,6 +40,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
@@ -50,6 +51,7 @@ TIM_HandleTypeDef htim4;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -57,10 +59,39 @@ static void MX_TIM4_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-    Led_Red_GPIO_Port->ODR |= Led_Red_Pin;
-    while (HAL_GPIO_ReadPin(Button_EXTI13_GPIO_Port,Button_EXTI13_Pin));
-    Led_Red_GPIO_Port->ODR &= ~Led_Red_Pin;
+
+void sendTo595(uint16_t value){
+    for (size_t i = 0; i < 9; i++){
+        if (value & 0x01 << (8-i)){   // раскладываем побитно value
+            HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_SET); // если 1, то SER в высокий уровень
+        }
+        else {
+            HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_RESET);  // если 0, то SER в низкий уровень
+        }
+
+        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_SET); //помещаем бит в сдвиговый регистр
+        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_SET);
+    }
+
+    HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_SET); //помещаем данные из сдвигового регистра в регистр хранения
+    HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_RESET);
+}
+
+void printDigit(uint8_t value){
+    if (value>10) return;
+    uint8_t arrayChar[11] = {0b00111111, //0
+                             0b00000110,  //1
+                             0b01011011,  //2
+                             0b01001111,  //3
+                             0b01100110,  //4
+                             0b01101101,  //5
+                             0b01111101,  //6
+                             0b00000111,  //7
+                             0b01111111,  //8
+                             0b01101111, //9
+                             0b01000000}; //-
+
+    sendTo595(arrayChar[value]);
 }
 
 /* USER CODE END 0 */
@@ -94,20 +125,26 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM4_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-
-
+    while (1)
+    {
+        if (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin)){
+            printDigit(10);
+            HAL_TIM_Base_Start(&htim1);
+            while (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin));
+            HAL_TIM_Base_Stop(&htim1);
+            printDigit((uint8_t)TIM1->CNT);
+        }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+    }
   /* USER CODE END 3 */
 }
 
@@ -162,6 +199,53 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 32-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 5;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
   * @brief TIM4 Initialization Function
   * @param None
   * @retval None
@@ -206,7 +290,7 @@ static void MX_TIM4_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 500-1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
@@ -238,11 +322,14 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Led_Red_GPIO_Port, Led_Red_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : Button_EXTI13_Pin */
-  GPIO_InitStruct.Pin = Button_EXTI13_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, SRCLR_595_Pin|SRCLK_595_Pin|RCLK_595_Pin|SER_595_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : Button_Pin */
+  GPIO_InitStruct.Pin = Button_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Button_EXTI13_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(Button_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -259,9 +346,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Led_Red_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /*Configure GPIO pins : SRCLR_595_Pin SRCLK_595_Pin RCLK_595_Pin SER_595_Pin */
+  GPIO_InitStruct.Pin = SRCLR_595_Pin|SRCLK_595_Pin|RCLK_595_Pin|SER_595_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 }
 
@@ -276,11 +366,11 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+    /* User can add his own implementation to report the HAL error return state */
+    __disable_irq();
+    while (1)
+    {
+    }
   /* USER CODE END Error_Handler_Debug */
 }
 
