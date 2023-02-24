@@ -60,21 +60,27 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 
 
-void sendTo595(uint16_t value){
+void sendTo595(uint8_t value){
     for (size_t i = 0; i < 9; i++){
         if (value & 0x01 << (8-i)){   // раскладываем побитно value
             HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_SET); // если 1, то SER в высокий уровень
+            HAL_Delay(1);
         }
         else {
             HAL_GPIO_WritePin(SER_595_GPIO_Port, SER_595_Pin, GPIO_PIN_RESET);  // если 0, то SER в низкий уровень
+            HAL_Delay(1);
         }
 
         HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_SET); //помещаем бит в сдвиговый регистр
-        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_SET);
+        HAL_Delay(1);
+        HAL_GPIO_WritePin(SRCLK_595_GPIO_Port, SRCLK_595_Pin, GPIO_PIN_RESET);
+        HAL_Delay(1);
     }
 
     HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_SET); //помещаем данные из сдвигового регистра в регистр хранения
+    HAL_Delay(1);
     HAL_GPIO_WritePin(RCLK_595_GPIO_Port, RCLK_595_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1);
 }
 
 void printDigit(uint8_t value){
@@ -132,14 +138,15 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+    printDigit(10);
     while (1)
     {
         if (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin)){
             printDigit(10);
             HAL_TIM_Base_Start(&htim1);
             while (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin));
+            printDigit((uint8_t)TIM1->CNT + 1);
             HAL_TIM_Base_Stop(&htim1);
-            printDigit((uint8_t)TIM1->CNT);
         }
     /* USER CODE END WHILE */
 
