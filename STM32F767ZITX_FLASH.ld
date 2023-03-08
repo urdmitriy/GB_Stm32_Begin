@@ -59,7 +59,7 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-  /* The program code and other data into "FLASH" Rom type memory */
+  /* The program code and other send_data into "FLASH" Rom type memory */
   .text :
   {
     . = ALIGN(4);
@@ -76,7 +76,7 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
-  /* Constant data into "FLASH" Rom type memory */
+  /* Constant send_data into "FLASH" Rom type memory */
   .rodata :
   {
     . = ALIGN(4);
@@ -128,25 +128,25 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-  /* Used by the startup to initialize data */
+  /* Used by the startup to initialize send_data */
   _sidata = LOADADDR(.data);
 
-  /* Initialized data sections into "RAM" Ram type memory */
+  /* Initialized send_data sections into "RAM" Ram type memory */
   .data :
   {
     . = ALIGN(4);
-    _sdata = .;        /* create a global symbol at data start */
-    *(.data)           /* .data sections */
-    *(.data*)          /* .data* sections */
+    _sdata = .;        /* create a global symbol at send_data start */
+    *(.data)           /* .send_data sections */
+    *(.data*)          /* .send_data* sections */
     *(.RamFunc)        /* .RamFunc sections */
     *(.RamFunc*)       /* .RamFunc* sections */
 
     . = ALIGN(4);
-    _edata = .;        /* define a global symbol at data end */
+    _edata = .;        /* define a global symbol at send_data end */
 
   } >RAM AT> FLASH
 
-  /* Uninitialized data section into "RAM" Ram type memory */
+  /* Uninitialized send_data section into "RAM" Ram type memory */
   . = ALIGN(4);
   .bss :
   {

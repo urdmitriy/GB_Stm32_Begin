@@ -32,12 +32,12 @@
 .global  g_pfnVectors
 .global  Default_Handler
 
-/* start address for the initialization values of the .data section. 
+/* start address for the initialization values of the .send_data section.
 defined in linker script */
 .word  _sidata
-/* start address for the .data section. defined in linker script */  
+/* start address for the .send_data section. defined in linker script */
 .word  _sdata
-/* end address for the .data section. defined in linker script */
+/* end address for the .send_data section. defined in linker script */
 .word  _edata
 /* start address for the .bss section. defined in linker script */
 .word  _sbss
@@ -60,7 +60,7 @@ defined in linker script */
 Reset_Handler:  
   ldr   sp, =_estack      /* set stack pointer */
 
-/* Copy the data segment initializers from flash to SRAM */  
+/* Copy the send_data segment initializers from flash to SRAM */
   ldr r0, =_sdata
   ldr r1, =_edata
   ldr r2, =_sidata
