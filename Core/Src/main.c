@@ -45,7 +45,7 @@ DMA_HandleTypeDef hdma_adc1;
 TIM_HandleTypeDef htim5;
 
 /* USER CODE BEGIN PV */
-volatile uint32_t adc_data[3] = {0,};
+volatile uint16_t adc_data[3] = {0,};
 volatile uint8_t flag_end_conversion = 0;
 /* USER CODE END PV */
 
@@ -94,8 +94,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ADC1_Init();
   MX_DMA_Init();
+  MX_ADC1_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_data, 3);
@@ -113,12 +113,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if (flag_end_conversion)
     {
+        flag_end_conversion = 0;
         HAL_ADC_Stop_DMA(&hadc1);
         HAL_GPIO_TogglePin(Led_Blue_GPIO_Port, Led_Blue_Pin);
-        HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_data, 3);
-        flag_end_conversion = 0;
         adc_data[0] = 0;
         adc_data[1] = 0;
+        adc_data[2] = 0;
+        HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_data, 3);
     }
 
     }
