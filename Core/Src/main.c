@@ -297,7 +297,7 @@ static void MX_GPIO_Init(void)
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    if (hadc->Instance != ADC1) return;
+    if (hadc->Instance != ADC1 || hadc->NbrOfCurrentConversionRank !=0) return;
     light_value = HAL_ADC_GetValue(&hadc1);
     HAL_GPIO_TogglePin(Led_Blue_GPIO_Port, Led_Blue_Pin);
 }
