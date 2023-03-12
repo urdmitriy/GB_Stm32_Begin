@@ -42,10 +42,14 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+DAC_HandleTypeDef hdac;
+DMA_HandleTypeDef hdma_dac1;
+
 TIM_HandleTypeDef htim5;
 
 /* USER CODE BEGIN PV */
 volatile uint16_t adc_data[3] = {0,};
+volatile uint16_t dac_value = 0;
 volatile uint8_t flag_end_conversion = 0;
 /* USER CODE END PV */
 
@@ -55,6 +59,7 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -96,9 +101,12 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+
   MX_TIM5_Init();
+  MX_DAC_Init();
   /* USER CODE BEGIN 2 */
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_data, 3);
+    HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t *)&dac_value, 1, DAC_ALIGN_12B_R);
     HAL_TIM_Base_Start(&htim5);
   /* USER CODE END 2 */
 
@@ -115,10 +123,14 @@ int main(void)
     {
         flag_end_conversion = 0;
         HAL_ADC_Stop_DMA(&hadc1);
-        HAL_GPIO_TogglePin(Led_Blue_GPIO_Port, Led_Blue_Pin);
-        adc_data[0] = 0;
-        adc_data[1] = 0;
-        adc_data[2] = 0;
+        if (adc_data[0] < 2000)
+        {
+            dac_value = 2*4096/3.3;
+        }
+        else
+        {
+            dac_value = 0;
+        }
         HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_data, 3);
     }
 
@@ -247,6 +259,46 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief DAC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DAC_Init(void)
+{
+
+  /* USER CODE BEGIN DAC_Init 0 */
+
+  /* USER CODE END DAC_Init 0 */
+
+  DAC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN DAC_Init 1 */
+
+  /* USER CODE END DAC_Init 1 */
+
+  /** DAC Initialization
+  */
+  hdac.Instance = DAC;
+  if (HAL_DAC_Init(&hdac) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT1 config
+  */
+  sConfig.DAC_Trigger = DAC_TRIGGER_T5_TRGO;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DAC_Init 2 */
+
+  /* USER CODE END DAC_Init 2 */
+
+}
+
+/**
   * @brief TIM5 Initialization Function
   * @param None
   * @retval None
@@ -267,7 +319,7 @@ static void MX_TIM5_Init(void)
   htim5.Instance = TIM5;
   htim5.Init.Prescaler = 32000-1;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 1000-1;
+  htim5.Init.Period = 10-1;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -299,8 +351,12 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
